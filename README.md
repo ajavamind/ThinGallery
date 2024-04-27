@@ -30,6 +30,8 @@ https://github.com/ajavamind/ThinGallery
 * Add slide show feature
 
 
+Screenshots
+-----------------------
 
 ![Original Index Page](screenshots/index.png)
 ![Gallery list](screenshots/gallery1.png)
