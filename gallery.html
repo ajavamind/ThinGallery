@@ -20,6 +20,22 @@ Usage
 * Don't rename it to `index.html` as the web server's own index.html is required in order to list the photos
 * Open gallery.html with a web browser, and enjoy
 
+Modifications by orr721
+-----------------------
+https://github.com/orr721/ThinGallery
+
+* Modify navigation arrows size and transparency
+* Add .gif to images
+* Comment console logs
+* Re-enable scrolling
+* Support left & right swipe (https://stackoverflow.com/a/56663695)
+
+Modifications by ajavamind
+-----------------------
+https://github.com/ajavamind/ThinGallery
+
+* Download multiple files with a predefined filename suffix
+* Add slide show feature
 
 -->
  <head>
@@ -122,6 +138,17 @@ Usage
           position:absolute;
           font-size:96px;
           font-weight: bold;
+          opacity: 0.4;
+        }
+        #slideshow {
+		  font-size:48px;
+		  font-weight: bold;
+	      opacity: 0.8;
+        }
+        #slideshowText {
+		  font-size:48px;
+		  font-weight: bold;
+	      opacity: 0.8;
         }
         #left,#right {
            top: 50%; transform: translateY(-50%);
@@ -129,20 +156,32 @@ Usage
         #left {  left:10px; cursor:pointer; }
         #right { right:10px; cursor:pointer; }
         #maximise { right:10px;bottom:10px; cursor:pointer; }
+		#slideshow { left:20px; cursor:pointer; }
+		
         #left,#right,#maximise {
           text-shadow: 4px 0 0 #000, 0 -4px 0 #000, 0 4px 0 #000, -4px 0 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, 3px 3px 0 #000, -3px -3px 0 #000;;
         }
    </style>
  </head>
 <body>
-
+<button id="downloadBtnSbs">Download Parallel Images</button>
+<button id="downloadBtnAna">Download Anaglyph Images</button>
 <div id="thumbs"></div>
+<div id="modal" class="fullscreen">
+  <div id="bigimage" style="visibility:hidden"></div>
+  <div id="loadingimage" style="visibility:hidden"></div>
+  <div id="slideshow" style="visibility:hidden">&#9654;</div>
+  <div id="slideshowText">Start Slideshow</div>
+  <div id="left" style="visibility:hidden">&#9664;</div>
+  <div id="right" style="visibility:hidden">&#9654;</div>
+  <div id="maximise" style="visibility:hidden">&#x2798;</div>
+</div>
 <script>
 
 var THUMB_SIZE = 240; // size when we have to load the full image and resize it
 var MAX_CONCURRENT_REQ = 2;
 
-var EXT_IMAGES = [".jpg",".jpeg",".png"];
+var EXT_IMAGES = [".jpg",".jpeg",".png",".gif"];
 var EXT_VIDEO = [".avi",".mov",".mpeg",".mpg",".mp4",".ogv"];
 var EXT_AUDIO = [".mp3",".wav",".ogg"];
 var EXT_TEXT = [".txt",".md"];
@@ -156,6 +195,10 @@ var imageURLs = [];
 var imageInfo = {};
 var showingImage; // currently loading/showing image
 var imageLoader, nextImageLoader, prevImageLoader;
+var downloadedImages = {}; // object to keep track of downloaded images
+var slideshowInterval;  // counter
+var SLIDESHOW_INTERVAL = 3  // seconds
+var slideshowOn = false
 
 // Get a thumbnail from EXIF data
 function getThumbFromFullImage(url, callback) {
@@ -180,7 +223,7 @@ function getThumbFromFullImage(url, callback) {
 function getEXIFThumb(url, arraybuffer, callback) {
   var arr = new Uint8Array(arraybuffer);
   if (arr[0]!=0xFF || arr[1]!=0xD8) {
-    console.warn(url+" is not a valid JPEG");
+    console.warn(url+" is not a valid JPEG");   // warning occurs for png files!!!
     return callback(url);
   }
   var offs = 2;
@@ -188,7 +231,7 @@ function getEXIFThumb(url, arraybuffer, callback) {
     offs += arr[offs+3] + 2;
   }
   if (arr[offs]!=0xFF || arr[offs+1]!=0xE1) {
-    console.warn(url+" doesn't have EXIF tag at "+offs);
+    console.warn(url+" doesn't have EXIF tag at "+offs);  // warning occurs but thumbnail still ok
     return callback(url);
   }
   var len = (arr[offs+2]<<8)|arr[offs+3];
@@ -342,7 +385,7 @@ function addDeferredThumb(thumbs, href) {
   im.className = "thumb";
   im.onclick = function(e) {
     e.preventDefault();
-    console.log("Clicked "+href);
+    //console.log("Clicked "+href);
     if (e.ctrlKey) {
       window.open(href, '_blank');
     } else {
@@ -372,7 +415,7 @@ function addBasicThumb(thumbs, href, iconText) {
   im.setAttribute("href", href);
   im.onclick = function(e) {
     e.preventDefault();
-    console.log("Clicked "+href);
+    //console.log("Clicked "+href);
     window.open(href, '_blank');
   };
   im = thumbs.appendChild(im);
@@ -432,6 +475,7 @@ function processIndexPage() {
   document.getElementById("left").setAttribute("style","visibility:inherit");
   document.getElementById("right").setAttribute("style","visibility:inherit");
   document.getElementById("maximise").setAttribute("style","visibility:inherit");
+  document.getElementById("slideshow").setAttribute("style","visibility:inherit");
   document.getElementById("modal").setAttribute("style","visibility:hidden");
 }
 
@@ -450,7 +494,7 @@ function loadImage(url) {
   var transform = imageInfo[url].rotation ? ';transform:rotate('+imageInfo[url].rotation+'deg)' : "";
   document.getElementById("bigimage").setAttribute("style","background-image:url("+imageInfo[url].thumb+")"+transform);
   imageLoader.onload = function() {
-    console.log("Full image loaded. Loading next and prev.");
+    //console.log("Full image loaded. Loading next and prev.");
     var i = imageURLs.indexOf(showingImage);
     if (i>=0) {
       if (i>0) prevImageLoader.src = imageURLs[i-1]+"?rand";
@@ -460,15 +504,20 @@ function loadImage(url) {
   imageLoader.src = url+"?rand";
   document.getElementById("loadingimage").setAttribute("style","background-image:url("+url.replace(/\(/g, "\\(").replace(/\)/g, "\\)")+"?rand)"+transform);
   showingImage = url;
+  // Show slideshow button when a full-screen image is being displayed
+  slideshow.style.display = 'block';
 }
 
 function onModalClicked(e) {
   e.preventDefault();
-  if (e.target.id=="left" || e.target.id=="right" || e.target.id=="maximise") return;
+  if (e.target.id=="left" || e.target.id=="right" || e.target.id=="maximise" || e.target.id=="slideshow") return;
+  // in modal
   document.getElementById("modal").setAttribute("style","visibility:hidden");
   document.getElementById("bigimage").setAttribute("style","");
   document.getElementById("loadingimage").setAttribute("style","");
   showingImage = null;
+  // Hide slideshow button when modal is closed
+  slideshow.style.display = 'none';
 }
 
 function onChangeModal(e, dir) {
@@ -487,19 +536,42 @@ function onMaximiseClicked(e) {
   window.open(showingImage, '_blank').focus();
 }
 
-window.onscroll = onModalClicked;
+// window.onscroll = onModalClicked;
 window.onload = function() {
   imageLoader = document.createElement("IMG");
   nextImageLoader = document.createElement("IMG");
   prevImageLoader = document.createElement("IMG");
+  var touchstartX = 0;
+  var touchendX = 0;
 
   document.getElementById("modal").onclick = onModalClicked;
+  document.getElementById("slideshow").onclick = function(e) {
+    e.preventDefault();
+	console.log("Slideshow button pressed ");
+    if (!slideshowOn) {
+      startSlideshow();
+      slideshowText.textContent = 'Stop Slideshow';
+	  slideshowOn = true;
+    } else {
+      stopSlideshow();
+	  slideshowOn = false;
+      slideshowText.textContent = 'Start Slideshow';
+    }
+  };
   document.getElementById("left").onclick = function(e) { onChangeModal(e,-1); };
   document.getElementById("right").onclick = function(e) { onChangeModal(e,+1); };
   document.getElementById("maximise").onclick = onMaximiseClicked;
   document.addEventListener("keydown", function (e) {
     if (e.keyCode==37) onChangeModal(e,-1);
     if (e.keyCode==39) onChangeModal(e,1);
+  });
+  document.addEventListener('touchstart', function (e) {
+    touchstartX = e.changedTouches[0].screenX
+  });
+  document.addEventListener('touchend', function (e) {
+    touchendX = e.changedTouches[0].screenX
+    if (touchendX < touchstartX) onChangeModal(e,+1);
+    if (touchendX > touchstartX) onChangeModal(e,-1);
   });
 
   if (window.location.search.length>1)
@@ -508,15 +580,50 @@ window.onload = function() {
     loadAllImages(".");
 };
 
+  // Add this function to download images with filename suffix
+  function downloadImages(suffix) {
+    var delay = 0; // delay in milliseconds
+    imageURLs.forEach(function(url, index) {
+	console.log("Suffix: "+suffix+" url="+url +" downloaded: "+downloadedImages[url]);
+    if (url.endsWith(suffix) && !downloadedImages[url]) {
+      setTimeout(function() {
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = url.split('/').pop();
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        downloadedImages[url] = true; // mark image as downloaded
+      }, delay);
+      delay += 1000; // increase delay by 1000 milliseconds for each image
+      }
+    });
+  }
+  
+  function startSlideshow() {
+    var i = imageURLs.indexOf(showingImage);
+    if (i < 0) i = 0;
+    loadImage(imageURLs[i]);
+    slideshowInterval = setInterval(function() {
+      i++;
+      if (i >= imageURLs.length) i = 0;
+      loadImage(imageURLs[i]);
+    }, SLIDESHOW_INTERVAL *1000); // change image every 6 seconds (default)
+  }
+  
+  function stopSlideshow() {
+    clearInterval(slideshowInterval);
+  }
+
+  // Add event listener to the download buttons
+  document.getElementById('downloadBtnSbs').addEventListener('click', function() {downloadImages("_2x1.jpg")});
+  document.getElementById('downloadBtnAna').addEventListener('click', function() {downloadImages("_ana.jpg")});
+
+  
 </script>
 
-<div id="modal" class="fullscreen">
-  <div id="bigimage" style="visibility:hidden"></div>
-  <div id="loadingimage" style="visibility:hidden"></div>
-  <div id="left" style="visibility:hidden">&#9664;</div>
-  <div id="right" style="visibility:hidden">&#9654;</div>
-  <div id="maximise" style="visibility:hidden">&#x2798;</div>
-</div>
+
 
 </div>
 </body>

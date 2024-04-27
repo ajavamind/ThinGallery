@@ -12,6 +12,25 @@ having to fully load every image file, and without any server-side scripting.
 [See it in action!](http://www.pur3.co.uk/gallery/gallery.html)
 ----------------------------------
 
+Modifications by orr721
+-----------------------
+https://github.com/orr721/ThinGallery
+
+* Modify navigation arrows size and transparency
+* Add .gif to images
+* Comment console logs
+* Re-enable scrolling
+* Support left & right swipe (https://stackoverflow.com/a/56663695)
+
+Modifications by ajavamind
+-----------------------
+https://github.com/ajavamind/ThinGallery
+
+* Download multiple files with a predefined filename suffix
+* Add slide show feature
+
+
+
 ![Original Index Page](screenshots/index.png)
 ![Gallery list](screenshots/gallery1.png)
 ![Gallery image](screenshots/gallery2.png)
