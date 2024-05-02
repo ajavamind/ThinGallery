@@ -164,6 +164,7 @@ https://github.com/ajavamind/ThinGallery
    </style>
  </head>
 <body>
+<button id="refreshBtn">Refresh Images</button>
 <button id="downloadBtnSbs">Download Parallel Images</button>
 <button id="downloadBtnAna">Download Anaglyph Images</button>
 <div id="thumbs"></div>
@@ -195,7 +196,7 @@ var imageURLs = [];
 var imageInfo = {};
 var showingImage; // currently loading/showing image
 var imageLoader, nextImageLoader, prevImageLoader;
-var downloadedImages = {}; // object to keep track of downloaded images
+var downloadedImages = {}; // object to keep track of all downloaded images
 var slideshowInterval;  // counter
 var SLIDESHOW_INTERVAL = 3  // seconds
 var slideshowOn = false
@@ -615,8 +616,15 @@ window.onload = function() {
   function stopSlideshow() {
     clearInterval(slideshowInterval);
   }
+  
+  function refreshImages() {
+    // Clear the div before adding new elements
+    document.getElementById("thumbs").innerHTML = "";
+    loadAllImages(".");
+  }
 
   // Add event listener to the download buttons
+  document.getElementById('refreshBtn').addEventListener('click', function() {refreshImages()});
   document.getElementById('downloadBtnSbs').addEventListener('click', function() {downloadImages("_2x1.jpg")});
   document.getElementById('downloadBtnAna').addEventListener('click', function() {downloadImages("_ana.jpg")});
 
