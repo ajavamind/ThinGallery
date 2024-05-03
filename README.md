@@ -29,6 +29,7 @@ https://github.com/ajavamind/ThinGallery
 * Download multiple files with a predefined filename suffix
 * Add slide show feature
 * Add reload images button to show new images in the folder on the server to avoid browser page reload that would clear downloaded manifest.
+* Sort image filenames with a date in descending order, most recently added first.
 
 
 Screenshots
