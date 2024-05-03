@@ -36,6 +36,8 @@ https://github.com/ajavamind/ThinGallery
 
 * Download multiple files with a predefined filename suffix
 * Add slide show feature
+* Add reload images button to show new images in the folder on the server to avoid browser page reload that would clear downloaded manifest.
+* Sort image filenames with a date in descending order, most recently added first.
 
 -->
  <head>
@@ -437,6 +439,8 @@ function addFolder(thumbs, href) {
 // Scan the index page and add thumbnails for everything
 function processIndexPage() {
   //console.log(this.responseXML.title);
+  // Clear the imageURLs array
+  imageURLs = [];
   var thumbs = document.getElementById("thumbs");
   var elements = this.responseXML.getElementsByTagName("a");
   var handled = [];
@@ -463,7 +467,7 @@ function processIndexPage() {
       handled.push(href);
       imageURLs.push(href);
       imageInfo[href] = { thumb : "" };
-      addDeferredThumb(thumbs, href);
+      //addDeferredThumb(thumbs, href);
     } else if (EXT_VIDEO.indexOf(ext)>=0) {
       addBasicThumb(thumbs, href, "&#x1F3A5;");
     } else if (EXT_AUDIO.indexOf(ext)>=0) {
@@ -473,6 +477,24 @@ function processIndexPage() {
     } else console.log("Unknown file type "+href+", ignoring.");
 
   }
+  // Sort imageURLs here
+  imageURLs.sort(function(a, b) {
+     // Assuming filenames are in the format: YYYYMMDDHHMMSS_filename.ext
+     var nameA = a.toUpperCase(); // ignore upper and lowercase
+     var nameB = b.toUpperCase(); // ignore upper and lowercase
+     if (nameA < nameB) {
+       return 1;
+     }
+     if (nameA > nameB) {
+       return -1;
+     }
+     // names must be equal
+      return 0;
+  });
+   // Now create the thumbnails
+  imageURLs.forEach(function(href) {
+    addDeferredThumb(thumbs, href);
+  });
   document.getElementById("left").setAttribute("style","visibility:inherit");
   document.getElementById("right").setAttribute("style","visibility:inherit");
   document.getElementById("maximise").setAttribute("style","visibility:inherit");
@@ -618,7 +640,7 @@ window.onload = function() {
   }
   
   function refreshImages() {
-    // Clear the div before adding new elements
+    // Clear the thumbnail div before adding new elements
     document.getElementById("thumbs").innerHTML = "";
     loadAllImages(".");
   }
