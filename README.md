@@ -1,7 +1,7 @@
 ThinGallery
 ===========
-
-https://github.com/gfwilliams/ThinGallery
+This repository is fork from 
+https://github.com/gfwilliams/ThinGallery with changes added from https://github.com/orr721/ThinGallery
 
 Copyright 2016 Gordon Williams, gw@pur3.co.uk (Licensed as MPLv2)
 
@@ -28,6 +28,7 @@ https://github.com/ajavamind/ThinGallery
 
 * Download multiple files with a predefined filename suffix
 * Add slide show feature
+* Add reload images button to show new images in the folder on the server to avoid browser page reload that would clear downloaded manifest.
 
 
 Screenshots
